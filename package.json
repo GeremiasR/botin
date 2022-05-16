@@ -1,0 +1,26 @@
+{
+  "name": "botin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server/app.ts",
+  "scripts": {
+    "start": "ts-node src/server/app.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tslint": "^6.1.3",
+    "typescript": "^4.6.4"
+  },
+  "dependencies": {
+    "axios": "^0.27.2",
+    "binance-api-node": "^0.11.36",
+    "comma-number": "^2.1.0",
+    "dotenv": "^16.0.0",
+    "node-binance-api": "^0.13.1",
+    "node-storage": "^0.0.9",
+    "uuid": "^8.3.2",
+    "web3": "^1.7.3"
+  }
+}
