@@ -15,6 +15,12 @@ const MONTO_ORDEN: number = 0.001;
 const APALANCAMIENTO: number = 1;
 const TIPO_MARGEN: string = "ISOLATED";
 
+enum ESTADO {
+  LONG= 1,
+  SHORT= 2,
+  ESPERA= 3
+}
+
 export abstract class Breakout {
   public static async Start(MARKET: string) {
     /* const res = await BinanceFutures.Apalancamiento(MARKET, APALANCAMIENTO);
@@ -22,6 +28,20 @@ export abstract class Breakout {
     console.log(res, res2);
     const res3 = await BinanceFutures.SellShort(MARKET, MONTO_ORDEN, 30150)
     console.log(res3) */
+    let started: boolean = true
+    let estado: number = ESTADO.ESPERA;
+    while (started) {
+      this.Validate(MARKET);
+      /* const status: IMensaje[] = [
+        { Color: "red", Texto: "Hola" },
+        { Color: "green", Texto: "Carola" },
+        { Color: "gray", Texto: "Como estas?" },
+      ];
+      await Status(2000, status); */
+    }
+  }
+
+  public static async Validate(MARKET: string) {
     const CANDLES: any[] = await BinanceFutures.Candles(MARKET, PERIODO);
     const bollingerBands: IBollingerBands = BollingerBands.Get(
       LONGITUD_INDICADORES,
@@ -30,14 +50,10 @@ export abstract class Breakout {
     const estocastico: IEstocastico = Estocastico.Get(CANDLES);
     console.log(bollingerBands);
     console.log(estocastico);
- /*    let started: boolean = true;
-    while (started) {
-      const status: IMensaje[] = [
-        { Color: "red", Texto: "Hola" },
-        { Color: "green", Texto: "Carola" },
-        { Color: "gray", Texto: "Como estas?" },
-      ];
-      await Status(2000, status);
-    } */
   }
 }
+
+//CERRAR UN SHORT POR ABAJO DEL 50 ESTOCASTICO -> CRUCE
+//CERRAR UN LONG POR ARRIBA DEL 550 ESTOCASTICO -> CRUCE
+//ABRIR UN SHORT CORTE Y CRUCE ABAJO DEL 20
+//ABRIR UN LONG CORTE Y CRUCE ARRIBA DEL 80
