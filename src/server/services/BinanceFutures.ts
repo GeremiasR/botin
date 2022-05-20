@@ -23,15 +23,13 @@ export abstract class BinanceFutures {
         return await client.futuresCancelAll(MARKET)
     }
     
-    static async BuyLong(MARKET, ORDER_AMOUNT, stopLoss){
+    static async BuyLong(MARKET, ORDER_AMOUNT){
         const res = await client.futuresMarketBuy(MARKET, ORDER_AMOUNT)
-        await client.futuresMarketSell(MARKET, ORDER_AMOUNT, {reduceOnly: true, stopPrice: stopLoss, type: 'STOP_MARKET'})
         return res
     }
 
-    static async SellShort(MARKET, ORDER_AMOUNT, stopLoss){
+    static async SellShort(MARKET, ORDER_AMOUNT){
         const res = await client.futuresMarketSell( MARKET, ORDER_AMOUNT)
-        await client.futuresMarketBuy(MARKET, ORDER_AMOUNT, {reduceOnly: true ,stopPrice: stopLoss, type: 'STOP_MARKET'})
         return res
     }
     
@@ -43,5 +41,12 @@ export abstract class BinanceFutures {
         return await client.futuresMarketSell(MARKET, ORDER_AMOUNT, {reduceOnly: true})
     }
 
+    static async OrderStatus(MARKET, ORDER_ID){
+        return await client.futuresOrderStatus(MARKET, {orderId: ORDER_ID})
+    }
+
+    static async OpenOrders(){
+        return await client.futuresAllOrders()
+    }
 
 }

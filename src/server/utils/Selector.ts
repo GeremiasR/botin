@@ -10,7 +10,7 @@ export async function Selector(code: number) {
       //TODO SCALPING
       break;
     case 2:
-      await Breakout.Start(MARKET);
+      await Breakout.Start();
       break;
     default:
       console.log("codigo de script incorrecto");
