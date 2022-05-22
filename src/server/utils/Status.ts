@@ -6,7 +6,7 @@ export interface IMensaje {
 }
 
 export function Status(ms: number, mensajes: IMensaje[]) {
-    console.clear();
+    //console.clear();
     const newMensaje : IMensaje = {
         Color: "gray",
         Texto: getDateFormated()

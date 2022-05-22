@@ -12,8 +12,8 @@ import { IMensaje, Status } from "../../utils/Status";
 
 const PERIODO: string = "1m";
 const LONGITUD_INDICADORES: number = 20;
-const MONTO_ORDEN: number = 0.011;
-const APALANCAMIENTO: number = 1;
+const MONTO_ORDEN: number = 0.055;
+const APALANCAMIENTO: number = 20;
 const TIPO_MARGEN: string = "ISOLATED";
 const MARKET: string = "ETHUSDT";
 
@@ -30,10 +30,11 @@ export abstract class Breakout {
   static candles: any[];
   static MARKET: string;
   static ORDEN: IOrden = {
-    Id: 12,
-    Tipo: ESTADO.LONG,
-    Precio_Entrada: 1928,
-    Cantidad: 0.011,
+    Id: 0,
+    Tipo: ESTADO.ESPERA,
+    Precio_Entrada: 0,
+    Cantidad: MONTO_ORDEN,
+    Entrada: false,
   };
   public static async Start() {
     this.MARKET = MARKET;
@@ -48,7 +49,6 @@ export abstract class Breakout {
 
   public static async Validate() {
     if (this.ORDEN.Tipo && this.ORDEN.Id) {
-      //BUSCAR SALIDA
       await this.BuscarSalida();
     } else {
       await this.BuscarEntrada();
@@ -85,12 +85,20 @@ export abstract class Breakout {
         this.candles[this.candles.length - 1][Candle.High] >=
         this.bollinger.Upper
       ) {
-        //HACER SHORT
+        const res: any = await BinanceFutures.SellShort(
+          this.MARKET,
+          this.ORDEN.Cantidad
+        );
         this.ORDEN.Tipo = ESTADO.SHORT;
+        this.ORDEN.Id = 1;
+        this.ORDEN.Precio_Entrada =
+          this.candles[this.candles.length - 1][Candle.Close];
         status.push({
           Color: "green",
-          Texto: `${this.ORDEN.Tipo} - operacion de entrada`,
+          Texto: `${this.ORDEN.Tipo} - operacion de entrada - ${res.orderId}`,
         });
+      /*   if (res.orderId) {
+        } */
       }
     } else {
       if (this.estocastico.K < 20 && this.estocastico.K >= this.estocastico.D) {
@@ -98,12 +106,20 @@ export abstract class Breakout {
           this.candles[this.candles.length - 1][Candle.Low] <=
           this.bollinger.Lower
         ) {
-          //HACER LONG
+          const res: any = await BinanceFutures.BuyLong(
+            this.MARKET,
+            this.ORDEN.Cantidad
+          );
           this.ORDEN.Tipo = ESTADO.LONG;
+          this.ORDEN.Id = 1;
+          this.ORDEN.Precio_Entrada =
+            this.candles[this.candles.length - 1][Candle.Close];
           status.push({
             Color: "green",
-            Texto: `${this.ORDEN.Tipo} - operacion de entrada`,
+            Texto: `${this.ORDEN.Tipo} - operacion de entrada - ${res.orderId}`,
           });
+          /* if (res.orderId) {
+          } */
         }
       }
     }
@@ -113,54 +129,111 @@ export abstract class Breakout {
         Texto: `${this.ORDEN.Tipo} - Esperando entrada`,
       });
     }
-    await Status(20000, status);
+    await Status(5000, status);
   }
 
   public static async BuscarSalida() {
     this.candles = await BinanceFutures.Candles(this.MARKET, PERIODO);
     this.bollinger = BollingerBands.Get(LONGITUD_INDICADORES, this.candles);
     this.estocastico = Estocastico.Get(this.candles);
-    if ((this.ORDEN.Tipo = ESTADO.LONG)) {
-      if (this.estocastico.K > 75 && this.estocastico.K <= this.estocastico.D) {
-        //TAKE PROFIT
-        console.log(
-          "TP en",
-          this.candles[this.candles.length - 1][Candle.Close]
-        );
+    const status: IMensaje[] = [];
+    if ((this.ORDEN.Tipo == ESTADO.LONG)) {
+      if (this.estocastico.K > 80) {
+        this.ORDEN.Entrada = true;
+        status.push({
+          Color: "green",
+          Texto: `Esperando entrada a estocastico ${this.estocastico.K}`,
+        });
+      } else {
+        if (this.ORDEN.Entrada) {
+          const res: any = await BinanceFutures.SellShort(
+            this.MARKET,
+            this.ORDEN.Cantidad
+          );
+          this.ORDEN.Tipo = ESTADO.ESPERA;
+          this.ORDEN.Id = 0;
+          this.ORDEN.Precio_Entrada = 0;
+          this.ORDEN.Entrada = false;
+          status.push({
+            Color: "green",
+            Texto: `Salida por take profit ${this.estocastico.K}`,
+          });
+          /* if (res.orderId) {
+          } */
+        }
       }
       if (
         parseFloat(this.candles[this.candles.length - 1][Candle.Close]) <=
-        this.ORDEN.Precio_Entrada * 0.998
+        this.ORDEN.Precio_Entrada * 0.995
       ) {
-        //STOP LOSS
-        console.log(
-          "SL en",
-          this.candles[this.candles.length - 1][Candle.Close],
-          this.ORDEN.Precio_Entrada
+        const res: any = await BinanceFutures.SellShort(
+          this.MARKET,
+          this.ORDEN.Cantidad
         );
+        this.ORDEN.Tipo = ESTADO.ESPERA;
+        this.ORDEN.Id = 0;
+        this.ORDEN.Precio_Entrada = 0;
+        this.ORDEN.Entrada = false;
+        status.push({
+          Color: "green",
+          Texto: `Salida por stop lose`,
+        });
+        /* if (res.orderId) {
+        } */
       }
     }
-    if ((this.ORDEN.Tipo = ESTADO.SHORT)) {
-      if (this.estocastico.K < 25 && this.estocastico.K >= this.estocastico.D) {
-        //TAKE PROFIT
-        console.log(
-          "TP en",
-          this.candles[this.candles.length - 1][Candle.Close]
-        );
+    if ((this.ORDEN.Tipo == ESTADO.SHORT)) {
+      if (this.estocastico.K < 20) {
+        this.ORDEN.Entrada = true;
+        status.push({
+          Color: "green",
+          Texto: `Esperando entrada a estocastico ${this.estocastico.K}`,
+        });
+      } else {
+        if (this.ORDEN.Entrada) {
+          const res: any = await BinanceFutures.BuyLong(
+            this.MARKET,
+            this.ORDEN.Cantidad
+          );
+          this.ORDEN.Tipo = ESTADO.ESPERA;
+          this.ORDEN.Id = 0;
+          this.ORDEN.Precio_Entrada = 0;
+          this.ORDEN.Entrada = false;
+          status.push({
+            Color: "green",
+            Texto: `Salida por take profit ${this.estocastico.K}`,
+          });
+          /* if (res.orderId) {
+          } */
+        }
       }
       if (
         parseFloat(this.candles[this.candles.length - 1][Candle.Close]) >=
-        this.ORDEN.Precio_Entrada * 1.002
+        this.ORDEN.Precio_Entrada * 1.005
       ) {
-        //STOP LOSS
-        console.log(
-          "SL en",
-          this.candles[this.candles.length - 1][Candle.Close],
-          this.ORDEN.Precio_Entrada
+        const res: any = await BinanceFutures.BuyLong(
+          this.MARKET,
+          this.ORDEN.Cantidad
         );
+        this.ORDEN.Tipo = ESTADO.ESPERA;
+        this.ORDEN.Id = 0;
+        this.ORDEN.Precio_Entrada = 0;
+        this.ORDEN.Entrada = false;
+        status.push({
+          Color: "green",
+          Texto: `Salida por stop lose`,
+        });
+        /* if (res.orderId) {
+        } */
       }
     }
-    await Status(5000, []);
+    if(!this.ORDEN.Entrada){
+      status.push({
+        Color: "green",
+        Texto: `Esperando salida de estocastico ${this.estocastico.K}`,
+      });
+    }
+    await Status(10000, status);
   }
 }
 
