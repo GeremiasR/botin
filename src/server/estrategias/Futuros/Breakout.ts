@@ -12,7 +12,7 @@ import { IMensaje, Status } from "../../utils/Status";
 
 const PERIODO: string = "1m";
 const LONGITUD_INDICADORES: number = 20;
-const MONTO_ORDEN: number = 0.055;
+const MONTO_ORDEN: number = 0.330;
 const APALANCAMIENTO: number = 20;
 const TIPO_MARGEN: string = "ISOLATED";
 const MARKET: string = "ETHUSDT";
@@ -97,7 +97,7 @@ export abstract class Breakout {
           Color: "green",
           Texto: `${this.ORDEN.Tipo} - operacion de entrada - ${res.orderId}`,
         });
-      /*   if (res.orderId) {
+        /*   if (res.orderId) {
         } */
       }
     } else {
@@ -137,7 +137,25 @@ export abstract class Breakout {
     this.bollinger = BollingerBands.Get(LONGITUD_INDICADORES, this.candles);
     this.estocastico = Estocastico.Get(this.candles);
     const status: IMensaje[] = [];
-    if ((this.ORDEN.Tipo == ESTADO.LONG)) {
+    if (this.ORDEN.Tipo == ESTADO.LONG) {
+      if (
+        parseFloat(this.candles[this.candles.length - 1][Candle.Close]) <=
+        this.ORDEN.Precio_Entrada * 0.995
+      ) {
+        const res: any = await BinanceFutures.SellShort(
+          this.MARKET,
+          this.ORDEN.Cantidad
+        );
+        this.ORDEN.Tipo = ESTADO.ESPERA;
+        this.ORDEN.Id = 0;
+        this.ORDEN.Entrada = false;
+        status.push({
+          Color: "green",
+          Texto: `Salida por stop lose`,
+        });
+        /* if (res.orderId) {
+        } */
+      }
       if (this.estocastico.K > 80) {
         this.ORDEN.Entrada = true;
         status.push({
@@ -152,7 +170,6 @@ export abstract class Breakout {
           );
           this.ORDEN.Tipo = ESTADO.ESPERA;
           this.ORDEN.Id = 0;
-          this.ORDEN.Precio_Entrada = 0;
           this.ORDEN.Entrada = false;
           status.push({
             Color: "green",
@@ -162,27 +179,24 @@ export abstract class Breakout {
           } */
         }
       }
+    }
+    if (this.ORDEN.Tipo == ESTADO.SHORT) {
       if (
-        parseFloat(this.candles[this.candles.length - 1][Candle.Close]) <=
-        this.ORDEN.Precio_Entrada * 0.995
+        parseFloat(this.candles[this.candles.length - 1][Candle.Close]) >=
+        this.ORDEN.Precio_Entrada * 1.005
       ) {
-        const res: any = await BinanceFutures.SellShort(
+        const res: any = await BinanceFutures.BuyLong(
           this.MARKET,
           this.ORDEN.Cantidad
         );
         this.ORDEN.Tipo = ESTADO.ESPERA;
         this.ORDEN.Id = 0;
-        this.ORDEN.Precio_Entrada = 0;
         this.ORDEN.Entrada = false;
         status.push({
           Color: "green",
           Texto: `Salida por stop lose`,
         });
-        /* if (res.orderId) {
-        } */
       }
-    }
-    if ((this.ORDEN.Tipo == ESTADO.SHORT)) {
       if (this.estocastico.K < 20) {
         this.ORDEN.Entrada = true;
         status.push({
@@ -197,7 +211,6 @@ export abstract class Breakout {
           );
           this.ORDEN.Tipo = ESTADO.ESPERA;
           this.ORDEN.Id = 0;
-          this.ORDEN.Precio_Entrada = 0;
           this.ORDEN.Entrada = false;
           status.push({
             Color: "green",
@@ -207,27 +220,8 @@ export abstract class Breakout {
           } */
         }
       }
-      if (
-        parseFloat(this.candles[this.candles.length - 1][Candle.Close]) >=
-        this.ORDEN.Precio_Entrada * 1.005
-      ) {
-        const res: any = await BinanceFutures.BuyLong(
-          this.MARKET,
-          this.ORDEN.Cantidad
-        );
-        this.ORDEN.Tipo = ESTADO.ESPERA;
-        this.ORDEN.Id = 0;
-        this.ORDEN.Precio_Entrada = 0;
-        this.ORDEN.Entrada = false;
-        status.push({
-          Color: "green",
-          Texto: `Salida por stop lose`,
-        });
-        /* if (res.orderId) {
-        } */
-      }
     }
-    if(!this.ORDEN.Entrada){
+    if (!this.ORDEN.Entrada) {
       status.push({
         Color: "green",
         Texto: `Esperando salida de estocastico ${this.estocastico.K}`,
@@ -236,8 +230,3 @@ export abstract class Breakout {
     await Status(10000, status);
   }
 }
-
-//CERRAR UN SHORT POR ABAJO DEL 50 ESTOCASTICO -> CRUCE
-//CERRAR UN LONG POR ARRIBA DEL 550 ESTOCASTICO -> CRUCE
-//ABRIR UN SHORT CORTE Y CRUCE ABAJO DEL 20
-//ABRIR UN LONG CORTE Y CRUCE ARRIBA DEL 80
